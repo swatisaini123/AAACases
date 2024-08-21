@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://live.zwidgets.com/js-sdk/1.1/ZohoEmbededAppSDK.min.js"></script>
+    <title>Fetch Example</title>
+</head>
+<style>
+    .primarybtn {
+        color: #fff;
+        border-radius: 6px;
+        font-family: LatoMedium, sans-serif;
+        box-sizing: border-box;
+        padding: 14px 31px 13px;
+        box-shadow: 0 -2px 0 0 #0061ca inset;
+        background-image: linear-gradient(to top, #0279ff, #00a3f3);
+        position: relative;
+        border: 0;
+        outline: 0;
+        cursor: pointer;
+        margin-left: 29%;
+    text-align: center;
+    margin-top: 13%;
+    }
+
+</style>
+<body>
+
+    <input type="submit" id="fetch-data" class="primarybtn mR0" value="Send Selected Cases to AAA" >
+    <pre id="response"></pre>
+
+    <script>
+        let currDate = getFormattedDate();
+        let Entity='', dataFortransmit = [], fileNumber = '', selectedRecordid,token='';
+        const codeToDescriptionMap = new Map([['AL', 'Alabama'],['AK', 'Alaska'],['AS', 'American Samoa'],['AZ', 'Arizona'],['AR', 'Arkansas'],['CA', 'California'],['CO', 'Colorado'],['CT', 'Connecticut'],['DE', 'Delaware'],['DC', 'District of Columbia'],['FL', 'Florida'],['GA', 'Georgia'],['GU', 'Guam'],['HI', 'Hawaii'],['ID', 'Idaho'],['IL', 'Illinois'],['IN', 'Indiana'],['IA', 'Iowa'],['KS', 'Kansas'],['KY', 'Kentucky'],['LA', 'Louisiana'],['ME', 'Maine'],['MD', 'Maryland'],['MA', 'Massachusetts'],['MI', 'Michigan'],['MN', 'Minnesota'],['MS', 'Mississippi'],['MO', 'Missouri'],['MT', 'Montana'],['NE', 'Nebraska'],['NV', 'Nevada'],['NH', 'New Hampshire'],['NJ', 'New Jersey'],['NM', 'New Mexico'],['NY', 'New York'],['NC', 'North Carolina'],['ND', 'North Dakota'],['MP', 'Northern Mariana Islands'],['OH', 'Ohio'],['OK', 'Oklahoma'],['OR', 'Oregon'],['PA', 'Pennsylvania'],['PR', 'Puerto Rico'],['RI', 'Rhode Island'],['SC', 'South Carolina'],['SD', 'South Dakota'],['TN', 'Tennessee'],['TX', 'Texas'],['UT', 'Utah'],['VT', 'Vermont'],['VI', 'Virgin Islands'],['VA', 'Virginia'],['WA', 'Washington'],['WV', 'West Virginia'],['WI', 'Wisconsin'],['WY', 'Wyoming']
+]);
+const descriptionToCodeMap = new Map(
+    [...codeToDescriptionMap.entries()].map(([code, description]) => [description, code])
+);
+function authenticationToken(){
+            const url = 'http://localhost:3000/proxy';
+            const data = {
+                "username": "SWG",
+                "password": "N$7nNu_D@48FMj"
+            };
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('JSON.stringify(data, null, 2)::'+JSON.stringify(data, null, 2));
+                token = data.token;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+        ZOHO.embeddedApp.on("PageLoad", function (data) {
+            selectedRecordid = data.EntityId;
+            Entity = data.Entity;
+            ZOHO.CRM.UI.Resize({ height: "250", width: "300" }).then(function(data){
+                console.log(data);
+              });
+            authenticationToken();
+        })
+        document.getElementById('fetch-data').addEventListener('click', () => {
+            selectedRecordid.forEach(recordid=>{
+              
+            console.log('getAAARecord:::'+recordid);
+
+            const documentEnpoint = 'http://localhost:3000/documents';
+           const url = 'http://localhost:3000/CaseFiling';
+            ZOHO.CRM.API.getRecord({Entity:Entity, RecordID:recordid}).then(function (response) {
+             console.log(JSON.stringify(response.data));
+                    let damageInformation = '';
+                    fileNumber = response.data[0].Name;
+            if(response.data[0].Attorney_Fees ==  true){
+                damageInformation = 'ATTY';
+            }
+            if(response.data[0].Interest ==  true){
+            
+                damageInformation =  'INT';
+            }
+            if(response.data[0].Arbitration_Costs ==  true){
+                
+                damageInformation = 'COST';
+            }
+            
+            data = [{ "Apidata":{
+                "cp2_Party_Type_Code": (response.data[0].Filing_Party === 'Consumer') ? 'C' : 'R',
+                "claim_Description": response.data[0].Dispute_Explanation,
+                "claim_Amount": response.data[0].Claim_Amount,
+                "add_Damage_Code": damageInformation,
+                "requested_City": response.data[0].Requested_Local_City,
+                "requested_State_Code": (descriptionToCodeMap.has(response.data[0].Requested_Local_State)) ? descriptionToCodeMap.get(response.data[0].Requested_Local_State) : (codeToDescriptionMap.has(response.data[0].Requested_Local_State)) ? response.data[0].Requested_Local_State : '',
+                "cp1_First_Name": response.data[0].Cp1_First_Name,
+                "cp1_Last_Name": response.data[0].Cp1_Last_Name,
+                "cp1_Addr_Line1": response.data[0].Cp1_Address,
+                "cp1_City": response.data[0].Cp1_City,
+                "cp1_Country_Code": response.data[0].Cp1_Country_Code,
+                "cp1_State_Code": (descriptionToCodeMap.has(response.data[0].Cp1_State)) ? descriptionToCodeMap.get(response.data[0].Cp1_State) : (codeToDescriptionMap.has(response.data[0].Cp1_State)) ? response.data[0].Cp1_State : '',
+                "cp1_Zip_Code": response.data[0].Cp1_Zip_Code,
+                "cp1_Phone": response.data[0].Cp1_Telephone,
+                "cp1_Email": response.data[0].Cp1_Email_Address,
+                "cp1rep_First_Name": response.data[0].Cp1_Rep_First_Name,
+                "cp1rep_Last_Name": response.data[0].Cp1_Rep_Last_Name,
+                "cp1rep_Addr_Line1": response.data[0].Cp1_Rep_Address,
+                "cp1rep_City": response.data[0].Cp1_Rep_City,
+                "cp1rep_Country_Code": response.data[0].Cp1_Rep_Country_Code,
+                "cp1rep_Account_Name": response.data[0].Cp1_Rep_Firm_Name,
+                "cp1_Case_Caption": response.data[0].Case_Caption,
+                "cp1rep_State_Code": (descriptionToCodeMap.has(response.data[0].Cp1_Rep_State)) ? descriptionToCodeMap.get(response.data[0].Cp1_Rep_State) : (codeToDescriptionMap.has(response.data[0].Cp1_Rep_State)) ? response.data[0].Cp1_Rep_State : '',
+                "cp1rep_Zip_Code": response.data[0].Cp1_Rep_Zip_Code,
+                "cp1rep_Phone": response.data[0].Cp1_Rep_Telephone,
+                "cp1rep_Email": response.data[0].Cp1_Rep_Email_Address,
+                "cp2_First_Name": response.data[0].Cp2_First_Name,
+                "cp2_Last_Name": response.data[0].Cp2_Last_Name,
+                "cp2_Addr_Line1": response.data[0].Cp2_Address,
+                "cp2_City": response.data[0].Cp2_City,
+                "cp2_Country_Code": response.data[0].Cp2_Country_Code,
+                "cp2_State_Code": (descriptionToCodeMap.has(response.data[0].Cp2_State)) ? descriptionToCodeMap.get(response.data[0].Cp2_State) : (codeToDescriptionMap.has(response.data[0].Cp2_State)) ? response.data[0].Cp2_State : '',
+                "cp2_Zip_Code": response.data[0].Cp2_Zip_Code,
+                "cp2_Phone": response.data[0].Cp2_Telephone,
+                "cp2_Email": response.data[0].Cp2_Email_Address,
+                "cp2rep_First_Name": response.data[0].Cp2_Rep_First_Name,
+                "cp2rep_Last_Name": response.data[0].Cp2_Rep_Last_Name,
+                "cp2rep_Addr_Line1": response.data[0].Cp2_Rep_Address,
+                "cp2rep_City": response.data[0].Cp2_Rep_City,
+                "cp2rep_Country_Code": response.data[0].Cp1_Rep_Country_Code,
+                "cp2rep_State_Code": (descriptionToCodeMap.has(response.data[0].Cp2_Rep_State)) ? descriptionToCodeMap.get(response.data[0].Cp2_Rep_State) : (codeToDescriptionMap.has(response.data[0].Cp2_Rep_State)) ? response.data[0].Cp2_Rep_State : '',
+                "cp2rep_Zip_Code": response.data[0].Cp2_Rep_Zip_Code,
+                "cp2rep_Phone": response.data[0].Cp2_Rep_Telephone,
+                "cp2rep_Email": response.data[0].Cp2_Rep_Email_Address,
+                "cp2rep_Account_Name": response.data[0].Cp2_Rep_Firm_Name,
+                "cp2_Primary_Use": 'B',
+                "cp1_Party_Type_Code": "C",
+                "cp1_Party_Cat_Code": "OT",
+                "cp1rep_File_Number": response.data[0].Name,
+                "cp1rep_Rep_Type_Code": "OTH",
+                "adr_Process": "A",
+                "claim_Type_Code": "C",
+                "claim_Issues": "OTH",
+                "received_Date":currDate
+            },
+            "authToken": token
+              }];
+              
+        console.log('data:::'+JSON.stringify(data));
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(' JSON.stringify(data, null, 2)1111:'+ JSON.stringify(data, null, 2));
+              var config={
+                Entity:Entity,
+                APIData:{
+                      "id": recordid,
+                      "Return_Response": data,
+                      "AAA_Case_ID": data.caseId,
+                      "Sent_To_AAA":true
+                }
+              }
+              ZOHO.CRM.API.updateRecord(config)
+              .then(function(data){
+                  console.log(data)
+              })
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('response').textContent = 'Error fetching data: ' + error.message;
+            });
+            })
+           ZOHO.CRM.API.getRelatedRecords({Entity:Entity,RecordID:recordid,RelatedList:"Attachments"}).then(function (response) {
+                console.log('Attachments:::'+JSON.stringify(response.data));
+                console.log('reponse.data.length:::'+response.data.length);
+             //   console.log('reponse.data.size:::'+response.data.size());
+                if(response.data.length >0){
+                    response.data.forEach(eachAttachment =>{
+                        var func_name = "get_related_attachment";
+                        var req_data ={
+                          "arguments": JSON.stringify({
+                              "id" : eachAttachment.id,
+                              "recordid":recordid
+                          })
+                        };
+                       
+                        ZOHO.CRM.FUNCTIONS.execute(func_name, req_data)
+                        .then(function(functionResponse){
+                            console.log("data:::"+JSON.stringify(functionResponse))
+                            let data = [{ "ApiData":{
+                                    "refFile" :fileNumber ,
+                                      "name" : eachAttachment.File_Name,
+                                    "documentContent":JSON.stringify(functionResponse),
+                                    "documentTypeCode":'',
+                                    "docDate":"08-08-2024",
+                                    "description":"",
+                                    "partyType":"",
+                                    "documentGroupCode":""
+                            },
+                            "authToken":token
+                            }];
+                            fetch(documentEnpoint, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(data)
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+console.log('JSON.stringify(data, null, 2):2222:'+JSON.stringify(data, null, 2));
+                               // document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                              //  document.getElementById('response').textContent = 'Error fetching data: ' + error.message;
+                            });
+                        })
+
+                    })
+                 console.log('Attachments:::'+JSON.stringify(response.data));
+                }
+            })
+        })
+        document.getElementById('response').innerHTML = "Please check the reponse in the Selected Record's field <b>Return Reponse</b>";
+        document.getElementById('response').style.color = "Green";
+
+        })
+        function getFormattedDate() {
+            const date = new Date();
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based, so add 1
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = date.getFullYear();
+            
+            return `${month}-${day}-${year}`;
+        }
+        
+  ZOHO.embeddedApp.init();
+
+    </script>
+</body>
+</html>
+
+
+
+
